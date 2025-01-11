@@ -23,33 +23,6 @@ export async function usersRoutes(app: FastifyInstance) {
     },
   )
 
-  // app.get(
-  //   '/:id',
-  // {
-  //   preHandler: [checkSessionIdExists],
-  // },
-  //   async (request) => {
-  //     const getTransactionsParamsSchema = z.object({
-  //       id: z.string().uuid(),
-  //     })
-
-  //     const { id } = getTransactionsParamsSchema.parse(request.params)
-
-  //     const { sessionId } = request.cookies
-
-  //     const transaction = await knex('transactions')
-  //       .where({
-  //         session_id: sessionId,
-  //         id,
-  //       })
-  //       .first()
-
-  //     return {
-  //       transaction,
-  //     }
-  //   },
-  // )
-
   // Create user
   app.post('/', async (request, reply) => {
     const createUserBodySchema = z.object({
@@ -80,9 +53,9 @@ export async function usersRoutes(app: FastifyInstance) {
         sessionId,
       })
       .catch(() => {
-        reply.status(500).send()
+        reply.status(500).send('Falha ao criar o usuário')
       })
 
-    return reply.status(201).send()
+    return reply.status(201).send('Usuário criado com sucesso')
   })
 }
