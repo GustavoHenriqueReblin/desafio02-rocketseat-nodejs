@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "knex": "node --no-warnings --loader tsx ./node_modules/.bin/knex",
+    "knex": "npx knex",
     "lint": "eslint src --ext .ts --fix",
     "build": "tsup src --out-dir build",
     "test": "vitest"
@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@rocketseat/eslint-config": "^1.2.0",
+    "@types/knex": "^0.15.2",
     "@types/node": "^18.11.18",
     "@types/supertest": "^2.0.12",
     "eslint": "^8.33.0",

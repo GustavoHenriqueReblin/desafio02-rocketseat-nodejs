@@ -14,22 +14,20 @@ export interface User {
 export async function usersRoutes(app: FastifyInstance) {
   app.get(
     '/',
-    // {
-    //   preHandler: [checkSessionIdExists],
-    // },
+    {
+      preHandler: [checkSessionIdExists],
+    },
     async (_request) => {
-      const users = await knex('users')
-        .select('*') as User[]
-
+      const users = (await knex('users').select('*')) as User[]
       return { users }
     },
   )
 
   // app.get(
   //   '/:id',
-    // {
-    //   preHandler: [checkSessionIdExists],
-    // },
+  // {
+  //   preHandler: [checkSessionIdExists],
+  // },
   //   async (request) => {
   //     const getTransactionsParamsSchema = z.object({
   //       id: z.string().uuid(),
@@ -52,6 +50,7 @@ export async function usersRoutes(app: FastifyInstance) {
   //   },
   // )
 
+  // Create user
   app.post('/', async (request, reply) => {
     const createUserBodySchema = z.object({
       email: z.string(),
@@ -59,30 +58,30 @@ export async function usersRoutes(app: FastifyInstance) {
       name: z.string(),
     })
 
-    const { email, password, name } = createUserBodySchema.parse(
-      request.body,
-    )
+    const { email, password, name } = createUserBodySchema.parse(request.body)
 
-    // let sessionId = request.cookies.sessionId
+    let sessionId = request.cookies.sessionId
 
-    // if (!sessionId) {
-    //   sessionId = randomUUID()
+    if (!sessionId) {
+      sessionId = randomUUID()
 
-    //   reply.setCookie('sessionId', sessionId, {
-    //     path: '/',
-    //     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    //   })
-    // }
+      reply.setCookie('sessionId', sessionId, {
+        path: '/',
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      })
+    }
 
-    await knex('users').insert({
-      id: randomUUID(),
-      email,
-      password,
-      name,
-      // session_id: sessionId,
-    }).catch(() => {
-      reply.status(500).send()
-    })
+    await knex('users')
+      .insert({
+        id: randomUUID(),
+        email,
+        password,
+        name,
+        sessionId,
+      })
+      .catch(() => {
+        reply.status(500).send()
+      })
 
     return reply.status(201).send()
   })
