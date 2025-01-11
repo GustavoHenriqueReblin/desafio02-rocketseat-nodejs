@@ -17,7 +17,7 @@ export async function usersRoutes(app: FastifyInstance) {
     {
       preHandler: [checkSessionIdExists],
     },
-    async (_request) => {
+    async () => {
       const users = (await knex('users').select('*')) as User[]
       return { users }
     },

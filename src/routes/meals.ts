@@ -2,8 +2,10 @@ import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { randomUUID } from 'node:crypto'
 import { knex } from '../database'
+
 import { checkSessionIdExists } from '../middlewares/check-session-id-exists'
 import { checkIdInParameters } from '../middlewares/check-id-in-parameters'
+import { checkCreateMealBody, checkUpdateMealBody } from '../middlewares/meals'
 
 export interface Meal {
   id: string
@@ -67,26 +69,9 @@ export async function mealsRoutes(app: FastifyInstance) {
   app.post(
     '/',
     {
-      preHandler: [checkSessionIdExists],
+      preHandler: [checkSessionIdExists, checkCreateMealBody],
     },
     async (request, reply) => {
-      const createMealBodySchema = z.object({
-        name: z.string(),
-        description: z.string(),
-        isInTheDiet: z.boolean(),
-      })
-
-      const checkMealsBody = createMealBodySchema.safeParse(request.body)
-      if (!checkMealsBody.success) {
-        reply
-          .status(400)
-          .send(
-            'Informações obrigatórias não foram preenchidas: ' +
-              JSON.stringify(checkMealsBody.error.format(), null, 2),
-          )
-        return
-      }
-
       const sessionId = request.cookies.sessionId
       const user = await knex('users').where({ sessionId }).first()
       if (!user) {
@@ -94,7 +79,11 @@ export async function mealsRoutes(app: FastifyInstance) {
         return
       }
 
-      const { name, description, isInTheDiet } = checkMealsBody.data
+      const { name, description, isInTheDiet } = request.body as {
+        name: string
+        description: string
+        isInTheDiet: boolean
+      }
       await knex('meals')
         .insert({
           id: randomUUID(),
@@ -104,8 +93,8 @@ export async function mealsRoutes(app: FastifyInstance) {
           date: new Date(),
           isInTheDiet,
         })
-        .catch(() => {
-          reply.status(500).send('Falha ao criar a refeição')
+        .catch((error) => {
+          reply.status(500).send('Falha ao criar a refeição: ' + error)
         })
 
       return reply.status(201).send('Refeição criada com sucesso')
@@ -116,27 +105,13 @@ export async function mealsRoutes(app: FastifyInstance) {
   app.put(
     '/:id',
     {
-      preHandler: [checkSessionIdExists, checkIdInParameters],
+      preHandler: [
+        checkSessionIdExists,
+        checkIdInParameters,
+        checkUpdateMealBody,
+      ],
     },
     async (request, reply) => {
-      const updateMealBodySchema = z.object({
-        name: z.string().optional(),
-        description: z.string().optional(),
-        date: z.date().optional(),
-        isInTheDiet: z.boolean().optional(),
-      })
-
-      const checkUpdateMealBody = updateMealBodySchema.safeParse(request.body)
-      if (!checkUpdateMealBody.success) {
-        reply
-          .status(400)
-          .send(
-            'Informações obrigatórias não foram preenchidas: ' +
-              JSON.stringify(checkUpdateMealBody.error.format(), null, 2),
-          )
-        return
-      }
-
       const sessionId = request.cookies.sessionId
       const user = await knex('users').where({ sessionId }).first()
       if (!user) {
@@ -145,7 +120,12 @@ export async function mealsRoutes(app: FastifyInstance) {
       }
 
       const { id } = request.params as { id: string }
-      const { name, description, date, isInTheDiet } = checkUpdateMealBody.data
+      const { name, description, date, isInTheDiet } = request.body as {
+        name?: string
+        description?: string
+        date?: Date
+        isInTheDiet?: boolean
+      }
       await knex('meals')
         .where({
           userId: user.id,
@@ -156,6 +136,9 @@ export async function mealsRoutes(app: FastifyInstance) {
           description,
           date,
           isInTheDiet,
+        })
+        .catch((error) => {
+          reply.status(500).send('Falha ao atualizar a refeição: ' + error)
         })
 
       return reply.status(201).send('Refeição atualizada com sucesso')
@@ -183,6 +166,9 @@ export async function mealsRoutes(app: FastifyInstance) {
           id,
         })
         .delete()
+        .catch((error) => {
+          reply.status(500).send('Falha ao deletar a refeição: ' + error)
+        })
 
       return reply.status(201).send('Refeição deletada com sucesso')
     },
