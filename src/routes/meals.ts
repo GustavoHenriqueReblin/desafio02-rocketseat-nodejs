@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { randomUUID } from 'node:crypto'
 import { knex } from '../database'
 import { checkSessionIdExists } from '../middlewares/check-session-id-exists'
+import { checkIdInParameters } from '../middlewares/check-id-in-parameters'
 
 export interface Meal {
   id: string
@@ -38,24 +39,9 @@ export async function mealsRoutes(app: FastifyInstance) {
   app.get(
     '/:id',
     {
-      preHandler: [checkSessionIdExists],
+      preHandler: [checkSessionIdExists, checkIdInParameters],
     },
     async (request, reply) => {
-      const getMealParamsSchema = z.object({
-        id: z.string().uuid(),
-      })
-
-      const checkMealParams = getMealParamsSchema.safeParse(request.params)
-      if (!checkMealParams.success) {
-        reply
-          .status(400)
-          .send(
-            'Id não informado: ' +
-              JSON.stringify(checkMealParams.error.format(), null, 2),
-          )
-        return
-      }
-
       const sessionId = request.cookies.sessionId
       const user = await knex('users').where({ sessionId }).first()
       if (!user) {
@@ -63,10 +49,11 @@ export async function mealsRoutes(app: FastifyInstance) {
         return
       }
 
+      const { id } = request.params as { id: string }
       const meal = await knex('meals')
         .where({
           userId: user.id,
-          id: checkMealParams.data.id,
+          id,
         })
         .first()
 
@@ -129,32 +116,15 @@ export async function mealsRoutes(app: FastifyInstance) {
   app.put(
     '/:id',
     {
-      preHandler: [checkSessionIdExists],
+      preHandler: [checkSessionIdExists, checkIdInParameters],
     },
     async (request, reply) => {
-      const updateMealParamsSchema = z.object({
-        id: z.string().uuid(),
-      })
-
       const updateMealBodySchema = z.object({
         name: z.string().optional(),
         description: z.string().optional(),
         date: z.date().optional(),
         isInTheDiet: z.boolean().optional(),
       })
-
-      const checkUpdateMealParams = updateMealParamsSchema.safeParse(
-        request.params,
-      )
-      if (!checkUpdateMealParams.success) {
-        reply
-          .status(400)
-          .send(
-            'Id não informado: ' +
-              JSON.stringify(checkUpdateMealParams.error.format(), null, 2),
-          )
-        return
-      }
 
       const checkUpdateMealBody = updateMealBodySchema.safeParse(request.body)
       if (!checkUpdateMealBody.success) {
@@ -174,11 +144,12 @@ export async function mealsRoutes(app: FastifyInstance) {
         return
       }
 
+      const { id } = request.params as { id: string }
       const { name, description, date, isInTheDiet } = checkUpdateMealBody.data
       await knex('meals')
         .where({
           userId: user.id,
-          id: checkUpdateMealParams.data.id,
+          id,
         })
         .update({
           name,
@@ -195,26 +166,9 @@ export async function mealsRoutes(app: FastifyInstance) {
   app.delete(
     '/:id',
     {
-      preHandler: [checkSessionIdExists],
+      preHandler: [checkSessionIdExists, checkIdInParameters],
     },
     async (request, reply) => {
-      const deleteMealParamsSchema = z.object({
-        id: z.string().uuid(),
-      })
-
-      const checkDeleteMealParams = deleteMealParamsSchema.safeParse(
-        request.params,
-      )
-      if (!checkDeleteMealParams.success) {
-        reply
-          .status(400)
-          .send(
-            'Id não informado: ' +
-              JSON.stringify(checkDeleteMealParams.error.format(), null, 2),
-          )
-        return
-      }
-
       const sessionId = request.cookies.sessionId
       const user = await knex('users').where({ sessionId }).first()
       if (!user) {
@@ -222,10 +176,11 @@ export async function mealsRoutes(app: FastifyInstance) {
         return
       }
 
+      const { id } = request.params as { id: string }
       await knex('meals')
         .where({
           userId: user.id,
-          id: checkDeleteMealParams.data.id,
+          id,
         })
         .delete()
 
